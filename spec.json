@@ -1,0 +1,15 @@
+{
+  "io": "输入：任务 DF-1001 和发布目标。输出：任务阶段、CI、运维调查、规则核查、冲突项和 BLOCKED 或 COORDINATE 结论。",
+  "goal": "分步读取研发任务与 CI 证据，并委派两个已登记子智能体核查运维和规则，汇总冲突与发布阻塞原因。",
+  "risks": [
+    "子智能体 delegate 调用超时或不可达导致阻塞",
+    "CI 日志缺失或格式异常影响判断"
+  ],
+  "title": "发布核查协作助手 v3",
+  "users": "研发负责人准备发布时输入研发任务 ID，要求协调运维调查和规则核查，形成可追溯的决策清单。",
+  "pending": [
+    "需确认 qa-devops-investigator-1017 和 qa-policy-advisor-1017 的 manifest 是否已注册且支持 delegate 协议",
+    "需确认 devflow.stage.report 的 WRITE 权限在当前命名空间是否生效"
+  ],
+  "success": "先调用 devflow.job.read、devflow.stage.report、ci.log.fetch，再从 ctx.manifest.spec.delegates 读取两个授权目标并实际逐一调用 ctx.delegate；任一工具或子智能体失败返回 BLOCKED；正常、缺参、冲突、注入与失败用例覆盖。"
+}

@@ -1,0 +1,50 @@
+kind: Agent
+spec:
+  auth:
+    audience: qa-release-checker-1017
+  eval:
+    dataset: qa-release-checker-1017/seed
+  kind: workflow
+  audit:
+    captureFields:
+    - request_id
+  tools:
+  - name: devflow.job.read
+    risk: low
+    access: read
+    approval: none
+  - name: devflow.stage.report
+    risk: low
+    access: write
+    approval: none
+  - name: ci.log.fetch
+    risk: low
+    access: read
+    approval: none
+  models:
+    budget:
+      dailyCny: 20.0
+    default: qwen-plus
+  prompts:
+    items:
+    - name: role
+      type: text
+    source: langfuse
+  runtime:
+    type: code
+    endpoint: http://qa-release-checker-1017.agents.svc.cluster.local:8000
+    language: python
+    liveness: k8s
+  delegates:
+  - qa-devops-investigator-1017
+  - qa-policy-advisor-1017
+  knowledge: []
+  guardrails:
+    pii: mask
+    grounding: 'off'
+    inputInjection: enforce
+metadata:
+  name: qa-release-checker-1017
+  owner: 平台组 / 官德志
+  displayName: 发布核查协作助手 v3
+apiVersion: keel/v1
