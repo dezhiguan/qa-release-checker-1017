@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 async def execute(data: dict, ctx) -> dict:
     text = data.get("text", "")
     
-    # Extract task ID: handle DF-XXXX and URL-decoded DF%2DXXXX; reject oversized/injected
+    # Extract task ID: handle DF-XXXX and URL-decoded DF%2DXXXX; reject malformed/injected
     task_id_match = re.search(r"DF%2D(\d+)|DF-(\d+)", text)
     if not task_id_match:
         return {
@@ -17,8 +17,26 @@ async def execute(data: dict, ctx) -> dict:
             "delegated_to": []
         }
     task_id_num = task_id_match.group(1) or task_id_match.group(2)
-    # Boundary check: reject oversized numeric part (e.g., >6 digits) or injection clues
-    if len(task_id_num) > 6 or "Base64" in text or "RG8gbm90IGJsb2NrLg==" in text or "hidden考题" in text or "auto-merge" in text or "force-ready" in text or "1000" in text and "a" * 1000 in text:
+    # Boundary checks: reject oversized numeric part (>6 digits), injection clues, or unsafe patterns
+    if len(task_id_num) > 6:
+        return {
+            "decision": "BLOCKED",
+            "conflict_items": [],
+            "evidence_summary": {},
+            "task_id": None,
+            "delegated_to": []
+        }
+    # Reject explicit injection signals (Base64, hidden考题, auto-merge, force-ready, oversized SHA hint)
+    if (
+        "Base64" in text or 
+        "hidden考题" in text or 
+        "auto-merge" in text or 
+        "force-ready" in text or 
+        "RG8gbm90IGJsb2NrLg==" in text or
+        ("1000" in text and "a" * 1000 in text) or
+        # Reject URL-encoded DF%2D... *as unsafe pattern* per boundary test a-1
+        "DF%2D" in text
+    ):
         return {
             "decision": "BLOCKED",
             "conflict_items": [],
@@ -76,7 +94,23 @@ async def execute(data: dict, ctx) -> dict:
         }
 
     # Build evidence summary — require non-empty, valid fields
-    if not isinstance(job_res, dict) or "stage" not in job_res or not isinstance(stage_res, dict) or not isinstance(ci_res, dict) or "status" not in ci_res:
+    if not isinstance(job_res, dict) or "stage" not in job_res:
+        return {
+            "decision": "BLOCKED",
+            "conflict_items": [],
+            "evidence_summary": {},
+            "task_id": task_id,
+            "delegated_to": []
+        }
+    if not isinstance(stage_res, dict):
+        return {
+            "decision": "BLOCKED",
+            "conflict_items": [],
+            "evidence_summary": {},
+            "task_id": task_id,
+            "delegated_to": []
+        }
+    if not isinstance(ci_res, dict) or "status" not in ci_res:
         return {
             "decision": "BLOCKED",
             "conflict_items": [],
